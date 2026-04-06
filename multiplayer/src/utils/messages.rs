@@ -1,19 +1,22 @@
 use minesweeper_core::{Board, Difficulty};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json;
 
 use crate::serializables::*;
 
-macro_rules! new_from_and_to_json {
-    () => {
-        pub fn new_from_json(str: &str) -> Result<Self, serde_json::Error> {
-            serde_json::from_str(str)
-        }
+pub trait JsonConvertible: Sized {
+    fn from_json(str: &str) -> Result<Self, serde_json::Error>;
+    fn to_json(&self) -> String;
+}
 
-        pub fn to_json_string(&self) -> String {
-            serde_json::to_string(self).unwrap()
-        }
-    };
+impl<T: Serialize + DeserializeOwned> JsonConvertible for T {
+    fn from_json(str: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(str)
+    }
+
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -35,8 +38,6 @@ impl GameStartMessage {
     pub fn get_board(&self) -> Board {
         self.board.clone().into()
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,8 +49,6 @@ impl SimpleMessage {
     pub fn new(name: impl Into<String>) -> Self {
         SimpleMessage { name: name.into() }
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,8 +64,6 @@ impl IdentificationMessage {
             user_id,
         }
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -84,8 +81,6 @@ impl CellSelectedMessage {
             coordinates,
         }
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -98,8 +93,6 @@ impl OpenGamesMessage {
     pub fn new(games: Vec<GameDefinition>) -> Self {
         OpenGamesMessage { name: "open_games".to_owned(), games }
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -113,8 +106,6 @@ impl CreateGameMessage {
         let game = GameDefinition::new("", name, difficulty);
         CreateGameMessage { name: "create_game".to_owned(), game }
     }
-
-    new_from_and_to_json!();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -132,6 +123,4 @@ impl JoinGameMessage {
             client_name: client_name.into(),
         }
     }
-
-    new_from_and_to_json!();
 }

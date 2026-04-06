@@ -1,2 +1,3 @@
 [workspace]
-members = ["core", "multiplayer"]
+members = ["core", "multiplayer", "client", "server"]
+resolver = "2"
