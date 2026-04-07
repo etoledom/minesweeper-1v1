@@ -1,34 +1,23 @@
 use minesweeper_multiplayer::{Board, Difficulty, Multiplayer, Point};
-use std::net::SocketAddr;
 use uuid::Uuid;
 
 pub struct Player {
-    id: String,
+    id: Uuid,
     name: String,
     game_id: String,
-    address: SocketAddr,
 }
 
 impl Player {
-    pub fn new(name: String, game_id: impl Into<String>, address: SocketAddr) -> Self {
-        Player {
-            id: Uuid::new_v4().to_string(),
-            name,
-            game_id: game_id.into(),
-            address,
-        }
+    pub fn new(id: Uuid, name: String, game_id: impl Into<String>) -> Self {
+        Player { id, name, game_id: game_id.into() }
     }
 
     pub fn game_id(&self) -> String {
         self.game_id.clone()
     }
 
-    pub fn get_id(&self) -> String {
-        self.id.clone()
-    }
-
-    pub fn get_address(&self) -> SocketAddr {
-        self.address
+    pub fn get_id(&self) -> Uuid {
+        self.id
     }
 
     pub fn get_name(&self) -> &str {
@@ -55,8 +44,8 @@ impl Game {
 
     pub fn generate_multi_game(&mut self) {
         let mut multi_game = Multiplayer::new([&self.host.name, &self.client.as_ref().unwrap().name], Difficulty::Easy);
-        multi_game.players[0].id = self.host.get_id();
-        multi_game.players[1].id = self.client.as_ref().unwrap().get_id();
+        multi_game.players[0].id = self.host.get_id().to_string();
+        multi_game.players[1].id = self.client.as_ref().unwrap().get_id().to_string();
         self.multi_game = multi_game;
     }
 

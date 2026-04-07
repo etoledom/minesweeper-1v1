@@ -12,6 +12,7 @@ tokio-tungstenite = "0.18.0"
 tokio = { version = "1.23.0", features = ["full"] }
 futures-util = "0.3.25"
 futures = "0.3.25"
+tower-http = { version = "0.5", features = ["fs"] }
 
 axum = { version = "0.8", features = ["ws"] }
 

@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+    <head>
+        
+<script type="module">
+import init, * as bindings from '/minesboomer-73a8d4e5e02dd5a6.js';
+const wasm = await init({ module_or_path: '/minesboomer-73a8d4e5e02dd5a6_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Minesboomer</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    <link rel="modulepreload" href="/minesboomer-73a8d4e5e02dd5a6.js" crossorigin="anonymous" integrity="sha384-K7lbmy6l2unSU/KOiLWIOtkjkgN83IODE8uHULp9U5CpNaNiu2x3DTCNkN+u2xn/"><link rel="preload" href="/minesboomer-73a8d4e5e02dd5a6_bg.wasm" crossorigin="anonymous" integrity="sha384-nDthv+OtHDbWL1p8qEaYpn43FqWrDspRLmLBeGMn3WO8HX+srN+R4W99iFdnN0xJ" as="fetch" type="application/wasm"></head>
+    <body>
+        <canvas id="the_canvas_id"></canvas>
+    </body>
+</html>

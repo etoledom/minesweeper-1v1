@@ -7,11 +7,12 @@ use networking::*;
 use gui::gameplay::MinesBoomer;
 
 #[cfg(target_arch = "wasm32")]
+use eframe::{wasm_bindgen::JsCast, web_sys};
+
+#[cfg(target_arch = "wasm32")]
 fn main() {
     console_error_panic_hook::set_once();
     wasm_bindgen_futures::spawn_local(async {
-        use eframe::{wasm_bindgen::JsCast, web_sys};
-
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("the_canvas_id").unwrap().dyn_into::<web_sys::HtmlCanvasElement>().unwrap();
 
@@ -30,9 +31,23 @@ fn main() -> eframe::Result {
     eframe::run_native("MinesBooMer", native_options, Box::new(|_| Ok(Box::new(app))))
 }
 
+#[cfg(target_arch = "wasm32")]
+fn get_ws_url() -> String {
+    let window = web_sys::window().unwrap();
+    let location = window.location();
+    let host = location.host().unwrap();
+    let protocol = if location.protocol().unwrap() == "https:" { "wss" } else { "ws" };
+    format!("{protocol}://{host}/ws")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn get_ws_url() -> String {
+    "ws://localhost:8000".to_string()
+}
+
 fn make_app() -> MinesBoomer {
     let options = ewebsock::Options::default();
-    let (sender, receiver) = ewebsock::connect("ws://localhost:8000", options).unwrap();
+    let (sender, receiver) = ewebsock::connect(get_ws_url(), options).unwrap();
 
     let game = Multiplayer::new(["Player 1", "Player 2"], Difficulty::Easy);
 

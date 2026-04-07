@@ -6,3 +6,8 @@ server:
 
 client:
     cargo run -p minesboomer
+
+build-web:
+    cd client && trunk build --release
+    rm -rf server/dist
+    cp -r client/dist server/dist
