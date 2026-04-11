@@ -22,12 +22,21 @@ async fn main() {
     let players = Players::new(Mutex::new(HashMap::new()));
     let server = Arc::new(Server::new(state, multi_games, players));
 
+    let dist_path = if std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/dist")).exists() {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/dist")
+    } else {
+        "/dist"
+    };
+
     let app = Router::new()
         .route("/ws", get(ws_handler))
-        .fallback_service(ServeDir::new(concat!(env!("CARGO_MANIFEST_DIR"), "/dist")))
+        .fallback_service(ServeDir::new(dist_path))
         .with_state(Arc::clone(&server));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+        .await
+        .unwrap();
 
     axum::serve(listener, app).await.unwrap();
 }

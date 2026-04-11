@@ -1,7 +1,5 @@
 mod gui;
 mod networking;
-
-use minesweeper_multiplayer::{Difficulty, Multiplayer};
 use networking::*;
 
 use gui::gameplay::MinesBoomer;
@@ -14,7 +12,11 @@ fn main() {
     console_error_panic_hook::set_once();
     wasm_bindgen_futures::spawn_local(async {
         let document = web_sys::window().unwrap().document().unwrap();
-        let canvas = document.get_element_by_id("the_canvas_id").unwrap().dyn_into::<web_sys::HtmlCanvasElement>().unwrap();
+        let canvas = document
+            .get_element_by_id("the_canvas_id")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .unwrap();
 
         let app = make_app();
         eframe::WebRunner::new()
@@ -24,6 +26,23 @@ fn main() {
     });
 }
 
+#[cfg(target_arch = "wasm32")]
+fn get_ws_url() -> String {
+    if cfg!(debug_assertions) {
+        "ws://localhost:8080/ws".to_string()
+    } else {
+        let window = web_sys::window().unwrap();
+        let location = window.location();
+        let host = location.host().unwrap();
+        let protocol = if location.protocol().unwrap() == "https:" {
+            "wss"
+        } else {
+            "ws"
+        };
+        format!("{protocol}://{host}/ws")
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result {
     let app = make_app();
@@ -31,27 +50,24 @@ fn main() -> eframe::Result {
     eframe::run_native("MinesBooMer", native_options, Box::new(|_| Ok(Box::new(app))))
 }
 
-#[cfg(target_arch = "wasm32")]
-fn get_ws_url() -> String {
-    let window = web_sys::window().unwrap();
-    let location = window.location();
-    let host = location.host().unwrap();
-    let protocol = if location.protocol().unwrap() == "https:" { "wss" } else { "ws" };
-    format!("{protocol}://{host}/ws")
-}
-
 #[cfg(not(target_arch = "wasm32"))]
 fn get_ws_url() -> String {
-    "ws://localhost:8000".to_string()
+    "ws://localhost:8080/ws".to_string()
 }
 
 fn make_app() -> MinesBoomer {
     let options = ewebsock::Options::default();
     let (sender, receiver) = ewebsock::connect(get_ws_url(), options).unwrap();
-
-    let game = Multiplayer::new(["Player 1", "Player 2"], Difficulty::Easy);
-
     let client = WSClient::new(sender, receiver);
+    MinesBoomer::new(client)
 
-    MinesBoomer::new(client, game)
+    // testing Game UI fast
+    // let mut boomer = MinesBoomer::new(client);
+    // let game = Multiplayer::new(
+    //     "Local Player",
+    //     "Remote Player",
+    //     minesweeper_multiplayer::Difficulty::Medium,
+    // );
+    // boomer.game = Some(game);
+    // boomer
 }

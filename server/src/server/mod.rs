@@ -27,7 +27,11 @@ pub struct Server {
 
 impl Server {
     pub fn new(peer_map: PeerMap, games: MultiGames, players: Players) -> Self {
-        Server { peer_map, games, players }
+        Server {
+            peer_map,
+            games,
+            players,
+        }
     }
 
     pub async fn handle_connection(self: Arc<Self>, socket: WebSocket) {
@@ -106,10 +110,18 @@ impl Server {
             let mut games_guard = self.games.lock().unwrap();
             let game_id = Uuid::new_v4().to_string();
             let player = Player::new(id, message.game.name, &game_id);
-            self.players.lock().unwrap().insert(id, player.game_id());
-            let game = Game::new(player, game_id);
+            let mut players = self.players.lock().unwrap();
+            players.insert(id, player.game_id());
+            let game = Game::new(player, game_id, message.game.difficulty.into());
             games_guard.push(game);
-            self.send_message_to_id(id, SimpleMessage::new("waiting_enemy").to_json());
+            self.send_message_to_id(&id, SimpleMessage::new("waiting_enemy").to_json());
+
+            for other_player in players.iter() {
+                if id != *other_player.0 {
+                    println!("Sending to: {}", id);
+                    self.send_open_games(other_player.0, &games_guard);
+                }
+            }
         } else if let Ok(message) = JoinGameMessage::from_json(message_string) {
             println!("-> Client joined game");
             let mut games = self.games.lock().unwrap();
@@ -117,17 +129,16 @@ impl Server {
             let client = Player::new(id, message.client_name, game.get_id());
             self.players.lock().unwrap().insert(id, client.game_id());
             game.set_client(client);
-            game.generate_multi_game();
+            game.setup_multi_game();
             self.send_new_game_to_players(game);
         } else if let Ok(message) = SimpleMessage::from_json(message_string) {
             if message.name == "games_request" {
-                self.send_open_games(id);
+                self.send_open_games(&id, &self.games.lock().unwrap());
             }
         }
     }
 
-    fn send_open_games(&self, id: Uuid) {
-        let games = self.games.lock().unwrap();
+    fn send_open_games(&self, id: &Uuid, games: &Vec<Game>) {
         let game_defs = games
             .iter()
             .filter(|game| !game.has_client())
@@ -139,10 +150,7 @@ impl Server {
             })
             .collect();
         let message = OpenGamesMessage::new(game_defs);
-        let peers = self.peer_map.lock().unwrap();
-        let sender = peers.get(&id).unwrap();
-        println!("-> Sending OpenGamesMessage: {}", message.to_json());
-        sender.unbounded_send(Message::Text(message.to_json().into())).unwrap();
+        self.send_message_to_id(id, message.to_json());
     }
 
     fn send_selected_to_players(&self, game: &Game, coordinates: SerializablePoint) {
@@ -155,20 +163,34 @@ impl Server {
     fn send_new_game_to_players(&self, game: &Game) {
         for player in game.get_players() {
             let is_active = game.is_player_active(player.get_id());
-            let board: SerializableBoard = game.get_board().clone().into();
-            self.send_message_to(player, GameStartMessage::new(board, is_active).to_json());
+            let local_player = player.get_name().to_string();
+            let remote_player = if let Some(remote_player) = game
+                .get_players()
+                .iter()
+                .find(|other_player| other_player.get_id() != player.get_id())
+            {
+                remote_player.get_name().to_string()
+            } else {
+                "".to_string()
+            };
+            self.send_message_to(
+                player,
+                GameStartMessage::new(game.get_inner_game(), is_active, local_player, remote_player).to_json(),
+            );
         }
     }
 
     fn send_message_to(&self, player: &Player, message_json: String) {
-        println!("Message sent: \n{}", message_json);
-        self.send_message_to_id(player.get_id(), message_json);
+        self.send_message_to_id(&player.get_id(), message_json);
     }
 
-    fn send_message_to_id(&self, id: Uuid, message_json: String) {
+    fn send_message_to_id(&self, id: &Uuid, message_json: String) {
         let peers = self.peer_map.lock().unwrap();
         let sender = peers.get(&id);
-        sender.unwrap().unbounded_send(Message::Text(message_json.into())).unwrap();
+        sender
+            .unwrap()
+            .unbounded_send(Message::Text(message_json.into()))
+            .unwrap();
     }
 
     fn _send_to_all(&self, msg: Message) {

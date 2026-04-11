@@ -1,6 +1,8 @@
-use minesweeper_multiplayer::{Board, Difficulty, Multiplayer, Point};
+use minesweeper_multiplayer::{Difficulty, Multiplayer};
+use minesweeper_multiplayer::{Game as CoreGame, Point};
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct Player {
     id: Uuid,
     name: String,
@@ -9,7 +11,11 @@ pub struct Player {
 
 impl Player {
     pub fn new(id: Uuid, name: String, game_id: impl Into<String>) -> Self {
-        Player { id, name, game_id: game_id.into() }
+        Player {
+            id,
+            name,
+            game_id: game_id.into(),
+        }
     }
 
     pub fn game_id(&self) -> String {
@@ -25,6 +31,7 @@ impl Player {
     }
 }
 
+#[derive(Debug)]
 pub struct Game {
     id: String,
     host: Player,
@@ -33,24 +40,22 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(player: Player, id: impl Into<String>) -> Self {
+    pub fn new(player: Player, id: impl Into<String>, difficulty: Difficulty) -> Self {
         Game {
             host: player,
             client: None,
-            multi_game: Multiplayer::new(["", ""], Difficulty::Easy),
+            multi_game: Multiplayer::new("", "", difficulty),
             id: id.into(),
         }
     }
 
-    pub fn generate_multi_game(&mut self) {
-        let mut multi_game = Multiplayer::new([&self.host.name, &self.client.as_ref().unwrap().name], Difficulty::Easy);
-        multi_game.players[0].id = self.host.get_id().to_string();
-        multi_game.players[1].id = self.client.as_ref().unwrap().get_id().to_string();
-        self.multi_game = multi_game;
+    pub fn setup_multi_game(&mut self) {
+        self.multi_game.local_player.id = self.host.get_id().to_string();
+        self.multi_game.remote_player.id = self.client.as_ref().unwrap().get_id().to_string();
     }
 
-    pub fn get_board(&self) -> &Board {
-        self.multi_game.get_board()
+    pub fn get_inner_game(&self) -> &CoreGame {
+        &self.multi_game.game
     }
 
     pub fn get_id(&self) -> String {

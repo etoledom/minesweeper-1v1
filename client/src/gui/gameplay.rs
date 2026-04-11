@@ -1,77 +1,91 @@
-use crate::networking::{Message, WSClient};
+use crate::{
+    gui::{
+        colors::ColorScheme,
+        game_panel::{
+            game_list::{GameList, GameListAction},
+            join_game_form::{JoinGameAction, JoinGameForm},
+            new_game_form::{NewGameForm, NewGameFormAction},
+            players_section::PlayersSection,
+            progress_section::ProgressSection,
+            to_win_section::ToWinSection,
+            turn_indicator::TurnIndicator,
+        },
+    },
+    networking::{Message, WSClient},
+};
 
 use super::mine_image::MineImage;
 use minesweeper_multiplayer::serializables::*;
 use minesweeper_multiplayer::*;
 
 use eframe::egui;
-use egui::{Button, Color32, Label, RichText, TextStyle, Ui};
+use egui::{Button, Color32, Label, RichText, TextStyle, Ui, Widget};
 
 #[derive(Clone)]
 pub struct OpenGame {
     pub name: String,
-    pub difficulty: String,
+    pub difficulty: Difficulty,
     pub game_id: String,
 }
 
 pub struct MinesBoomer {
-    pub game: Multiplayer,
-    mine: MineImage,
+    pub game: Option<Multiplayer>,
     ws_client: WSClient,
     is_active: bool,
-    show_games_list: Option<Vec<OpenGame>>,
+    games_list: Vec<OpenGame>,
     pub waiting_for_enemy: bool,
     show_game_name_popup: bool,
-    game_creation_view: GameCreationView,
-    game_name: String,
+    new_game_form: NewGameForm,
+    join_game_form: JoinGameForm,
+    scheme: ColorScheme,
 }
 
 impl MinesBoomer {
-    pub fn new(ws_client: WSClient, game: Multiplayer) -> Self {
+    pub fn new(ws_client: WSClient) -> Self {
         MinesBoomer {
-            game,
-            mine: MineImage::default(),
+            game: None,
             ws_client,
             is_active: false,
-            show_games_list: None,
+            games_list: vec![],
             waiting_for_enemy: false,
             show_game_name_popup: false,
-            game_creation_view: GameCreationView::default(),
-            game_name: "".to_owned(),
+            new_game_form: Default::default(),
+            join_game_form: Default::default(),
+            scheme: ColorScheme::dark(),
         }
     }
 
-    fn draw_cell(&mut self, cell: &Cell, coordinates: Point, ui: &mut Ui) {
+    fn draw_cell(&mut self, cell: &Cell, coordinates: Point, game: &mut Multiplayer, ui: &mut Ui) {
         let color = get_color_for_cell(cell);
         let text = get_text_for_cell(cell);
 
         if cell.is_mine() && cell.is_cleared() {
-            self.mine.ui(ui);
+            MineImage::ui(ui);
         } else if ui.add_sized([50., 50.], Button::new(text).fill(color)).clicked() {
-            self.on_cell_tapped(coordinates);
+            self.on_cell_tapped(game, coordinates);
         }
     }
 
-    fn draw_board(&mut self, ui: &mut Ui) {
-        let dimentions = self.game.get_board_dimentions();
+    fn draw_board(&mut self, game: &mut Multiplayer, ui: &mut Ui) {
+        let dimentions = game.get_board_dimentions();
         ui.horizontal(|ui| {
             for x in 0..dimentions.width {
                 ui.vertical(|ui| {
                     for y in 0..dimentions.height {
                         let coordinates = Point { x, y };
 
-                        let Some(cell) = self.game.get_board().cell_at(coordinates) else {
+                        let Some(cell) = game.get_board().cell_at(coordinates) else {
                             continue;
                         };
-                        self.draw_cell(&cell.clone(), coordinates, ui);
+                        self.draw_cell(&cell.clone(), coordinates, game, ui);
                     }
                 });
             }
         });
     }
 
-    fn draw_gui(&mut self, ui: &mut Ui) {
-        if let Some(winner) = self.game.winner() {
+    fn draw_gui(&mut self, game: &Multiplayer, ui: &mut Ui) {
+        if let Some(winner) = game.winner() {
             ui.vertical_centered_justified(|ui| {
                 ui.heading("WINNER!");
                 ui.heading(winner.name.to_string());
@@ -79,105 +93,97 @@ impl MinesBoomer {
             return;
         }
 
-        let remining_mines = self.game.game.remaining_mines();
-        let mines_to_win = self.game.remaining_to_win();
-        let winning = self.game.player_winning();
-        let is_active = self.is_active;
-
         ui.vertical_centered_justified(|ui| {
-            if is_active {
-                ui.heading("Is YOUR tourn!");
-            } else {
-                ui.heading("Your opponent is playing");
+            TurnIndicator {
+                is_my_turn: self.is_active,
+                opponent_name: &game.remote_player.name,
+                colors: &self.scheme,
             }
-            // ui.heading(current_player);
-            ui.label(format!("Mines left: {}", remining_mines));
-            if mines_to_win <= 5 {
-                let Some(winning) = winning else { return };
-                ui.separator();
-                ui.label(format!("{} is winning!", winning.name));
-                ui.label(format!("{} mines to go", mines_to_win));
-            }
+            .ui(ui);
+
+            ui.separator();
+            ui.add_space(10.);
+
+            PlayersSection::new(&game.local_player, &game.remote_player, &self.scheme).ui(ui);
+
+            ui.separator();
+            ui.add_space(10.);
+
+            ProgressSection::new(
+                &game.local_player,
+                &game.remote_player,
+                game.total_mines_to_win(),
+                &self.scheme,
+            )
+            .ui(ui);
+
+            ui.add_space(10.);
+            ui.separator();
+            ui.add_space(10.);
+
+            ToWinSection::new(game.local_to_win(), &self.scheme).ui(ui);
         });
     }
 
-    fn draw_game_list(&mut self, ui: &mut Ui, game_list: &[OpenGame]) {
+    fn draw_game_list(&mut self, ui: &mut Ui) {
         ui.vertical_centered(|ui| {
-            let title = egui::RichText::new("MinesBooMer!").size(50.);
-            let title_label = Label::new(title);
-            ui.add(title_label);
+            ui.add(Label::new(RichText::new("MinesBooMer!").size(50.)));
             ui.separator();
             ui.add_space(10.);
-            ui.label("Chose a game to join or create a new one.");
+            ui.label("Find a game to join or create your own");
             ui.add_space(10.);
             ui.vertical_centered(|ui| {
+                ui.set_max_width(400.);
                 if ui.button("New game").clicked() {
                     self.show_game_name_popup = true;
                 }
-                if !game_list.is_empty() {
-                    ui.add_space(10.);
-                    ui.label("Current games:");
-                    ui.add_space(10.);
-                }
-                game_list.iter().for_each(|game| {
-                    if ui.add_sized([150., 30.], Button::new(&game.name)).clicked() {
-                        self.send_join_game_message(&game.game_id);
+
+                let action = GameList::new(&self.games_list, &self.scheme).show(ui);
+                match action {
+                    GameListAction::Join(game) => {
+                        self.join_game_form.open(game);
                     }
-                });
+                    _ => {}
+                }
+
+                if self.join_game_form.is_open() {
+                    match self.join_game_form.show(ui, &self.scheme) {
+                        JoinGameAction::Join(game_id, player_name) => self.send_join_game_message(game_id, player_name),
+                        JoinGameAction::Cancel => self.join_game_form.reset(),
+                        _ => {}
+                    }
+                }
+
+                if self.show_game_name_popup {
+                    let action = self.new_game_form.show(ui, &self.scheme);
+
+                    match action {
+                        NewGameFormAction::Create { name, difficulty } => {
+                            self.send_create_new_game_message(name, difficulty);
+                            self.show_game_name_popup = false;
+                        }
+                        NewGameFormAction::Cancel => {
+                            self.show_game_name_popup = false;
+                        }
+                        NewGameFormAction::None => {}
+                    }
+                }
             });
         });
-
-        if self.show_game_name_popup {
-            self.show_game_creation_window(ui);
-        }
-    }
-
-    fn show_game_creation_window(&mut self, ui: &Ui) {
-        let closed = self.game_creation_view.show(ui.ctx(), |name| {
-            self.game_name = name;
-            self.show_game_name_popup = false;
-        });
-
-        if !self.game_name.is_empty() {
-            self.send_create_new_game_message();
-            self.game_name = "".to_owned();
-        }
-
-        self.show_game_name_popup = !closed;
     }
 
     fn draw_waiting_screen(&self, ui: &mut Ui) {
         ui.heading("Waiting for your enemy to connect...");
     }
 
-    fn on_cell_tapped(&mut self, coordinates: Point) {
+    fn on_cell_tapped(&mut self, game: &mut Multiplayer, coordinates: Point) {
         if !self.is_active {
             return;
         }
-        if self.game.winner().is_none() {
-            self.game.player_selected(coordinates);
+        if game.winner().is_none() {
+            game.player_selected(coordinates);
             self.send_selected_message(coordinates);
         }
-    }
-
-    pub fn set_is_active(&mut self, is_active: bool) {
-        self.is_active = is_active;
-    }
-
-    pub fn remote_player_selected(&mut self, coordinates: Point) {
-        self.game.player_selected(coordinates);
-    }
-
-    pub fn set_board(&mut self, board: Board) {
-        self.game.game.board = board
-    }
-
-    pub fn present_open_games_menu(&mut self, games: Vec<OpenGame>) {
-        self.show_games_list = Some(games);
-    }
-
-    pub fn close_open_games_menu(&mut self) {
-        self.show_games_list = None;
     }
 }
 
@@ -190,21 +196,32 @@ impl eframe::App for MinesBoomer {
         }
         ui.request_repaint();
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.horizontal_top(|ui| {
-                if self.show_games_list.is_some() {
-                    let list = self.show_games_list.as_ref().unwrap();
-                    self.draw_game_list(ui, &list.clone());
-                    return;
-                }
+        if let Some(mut game) = self.game.take() {
+            egui::Panel::right("game_panel")
+                .max_size(500.0)
+                .show_separator_line(true)
+                .resizable(false)
+                .show_inside(ui, |ui| {
+                    self.draw_gui(&game, ui);
+                });
+
+            egui::CentralPanel::default().show_inside(ui, |ui| {
+                ui.horizontal_top(|ui| {
+                    self.draw_board(&mut game, ui);
+                });
+            });
+            self.game = Some(game);
+        } else {
+            egui::CentralPanel::default().show_inside(ui, |ui| {
                 if self.waiting_for_enemy {
                     self.draw_waiting_screen(ui);
                     return;
                 }
-                self.draw_board(ui);
-                self.draw_gui(ui);
+
+                self.draw_game_list(ui);
+                return;
             });
-        });
+        }
     }
 }
 
@@ -212,13 +229,19 @@ impl eframe::App for MinesBoomer {
 
 impl MinesBoomer {
     pub fn handle_message(&mut self, message: &Message) {
+        println!("Receiving: {}", message);
         match message {
             Message::GameStarted(msg) => {
-                let board = msg.get_board();
-                self.set_board(board);
-                self.set_is_active(msg.is_active);
+                let game = msg.get_game();
+                let mut multi_game = Multiplayer::new_with_game(game, &msg.local_player, &msg.remote_player);
+
+                multi_game.local_player.is_active = msg.is_active;
+                multi_game.remote_player.is_active = !msg.is_active;
+
+                self.is_active = msg.is_active;
+                self.game = Some(multi_game);
+
                 self.waiting_for_enemy = false;
-                self.close_open_games_menu();
             }
             Message::OpenGames(msg) => {
                 let games = msg
@@ -226,15 +249,19 @@ impl MinesBoomer {
                     .iter()
                     .map(|game| OpenGame {
                         name: game.name.clone(),
-                        difficulty: game.difficulty.clone(),
+                        difficulty: game.difficulty.into(),
                         game_id: game.id.clone(),
                     })
                     .collect();
-                self.present_open_games_menu(games);
+                self.games_list = games;
             }
             Message::CellSelected(msg) => {
-                self.remote_player_selected(msg.coordinates.into());
-                self.set_is_active(msg.is_active_player);
+                if let Some(game) = &mut self.game {
+                    game.player_selected(msg.coordinates.into());
+                    game.local_player.is_active = msg.is_active_player;
+                    game.remote_player.is_active = !msg.is_active_player;
+                    self.is_active = msg.is_active_player;
+                }
             }
             Message::Text(msg) => match msg.as_str() {
                 "identify" => {
@@ -243,11 +270,11 @@ impl MinesBoomer {
                 }
                 "waiting_enemy" => {
                     self.waiting_for_enemy = true;
-                    self.close_open_games_menu();
                 }
                 "client_disconnected" => self.waiting_for_enemy = true,
                 "host_disconnected" => {
-                    self.present_open_games_menu(vec![]);
+                    self.game = None;
+                    self.games_list = vec![];
                     self.request_open_games();
                 }
                 _ => return,
@@ -277,9 +304,9 @@ impl MinesBoomer {
         self.send_message(message);
     }
 
-    fn send_join_game_message(&mut self, game_id: impl Into<String>) {
+    fn send_join_game_message(&mut self, game_id: impl Into<String>, player_name: impl Into<String>) {
         println!("<- Sending joing game");
-        let message = JoinGameMessage::new(game_id, "Great Player");
+        let message = JoinGameMessage::new(game_id, player_name);
         self.send_message(message);
     }
 
@@ -304,43 +331,17 @@ fn get_text_for_cell(cell: &Cell) -> RichText {
         (_, _) => "".to_string(),
     };
 
-    egui::RichText::new(text).size(20.).color(Color32::BLACK).text_style(TextStyle::Button)
+    egui::RichText::new(text)
+        .size(20.)
+        .color(Color32::BLACK)
+        .text_style(TextStyle::Button)
 }
 
 impl MinesBoomer {
-    fn send_create_new_game_message(&mut self) {
+    fn send_create_new_game_message(&mut self, name: String, difficulty: Difficulty) {
         println!("<- Sending create new game");
-        let message = CreateGameMessage::new(self.game_name.clone(), Difficulty::Easy);
+        let message = CreateGameMessage::new(name, difficulty);
+        println!("Message: {}", message.to_json());
         self.send_message(message);
-    }
-}
-
-#[derive(Default, Debug)]
-struct GameCreationView {
-    name: String,
-}
-
-impl GameCreationView {
-    fn show(&mut self, ctx: &egui::Context, on_send: impl FnMut(String)) -> bool {
-        let mut closed = false;
-        egui::Window::new("New Game").resizable(true).default_width(280.0).show(ctx, |ui| {
-            self.ui(ui, on_send, &mut closed);
-        });
-        closed
-    }
-
-    fn ui(&mut self, ui: &mut egui::Ui, mut on_send: impl FnMut(String), close: &mut bool) {
-        ui.label("The name for the new game:");
-        ui.text_edit_singleline(&mut self.name);
-
-        if ui.button(format!("Create game: '{}'", self.name)).clicked() {
-            on_send(self.name.clone());
-        }
-
-        if ui.button("Cancel").clicked() {
-            *close = true;
-            // self.show_game_name_popup = false;
-            // self.send_create_new_game_message(name);
-        }
     }
 }

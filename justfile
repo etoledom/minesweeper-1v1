@@ -5,7 +5,7 @@ server:
     cargo run -p minesboomer_server
 
 client:
-    cargo run -p minesboomer
+    cd client && trunk serve --port 3000 --proxy-backend=http://localhost:8080/ws
 
 build-web:
     cd client && trunk build --release

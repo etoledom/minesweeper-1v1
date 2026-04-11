@@ -2,18 +2,38 @@ use crate::Player;
 use minesweeper_core::*;
 use std::cmp::{self, Ordering};
 
+#[derive(Debug)]
 pub struct Multiplayer {
-    pub players: Vec<Player>,
+    pub local_player: Player,
+    pub remote_player: Player,
     pub game: Game,
 }
 
 impl Multiplayer {
-    pub fn new(player_names: [&str; 2], difficulty: Difficulty) -> Multiplayer {
-        let mut players: Vec<Player> = player_names.iter().map(|name| Player::new(name.to_string())).collect();
+    pub fn new(local_player: &str, remote_player: &str, difficulty: Difficulty) -> Multiplayer {
+        let mut local_player = Player::new(local_player);
+        let remote_player = Player::new(remote_player);
 
-        players[0].is_active = true;
+        local_player.is_active = true;
 
-        Multiplayer { players, game: Game::new(difficulty) }
+        Multiplayer {
+            local_player,
+            remote_player,
+            game: Game::new(difficulty),
+        }
+    }
+
+    pub fn new_with_game(inner_game: Game, local_player: &str, remote_player: &str) -> Self {
+        let mut local_player = Player::new(local_player);
+        let remote_player = Player::new(remote_player);
+
+        local_player.is_active = true;
+
+        Multiplayer {
+            local_player,
+            remote_player,
+            game: inner_game,
+        }
     }
 
     pub fn get_board(&self) -> &Board {
@@ -25,11 +45,19 @@ impl Multiplayer {
     }
 
     pub fn current_player_mut(&mut self) -> &mut Player {
-        self.players.iter_mut().find(|player| player.is_active).unwrap()
+        if self.local_player.is_active {
+            &mut self.local_player
+        } else {
+            &mut self.remote_player
+        }
     }
 
     pub fn current_player(&self) -> &Player {
-        self.players.iter().find(|player| player.is_active).unwrap()
+        if self.local_player.is_active {
+            &self.local_player
+        } else {
+            &self.remote_player
+        }
     }
 
     pub fn get_board_dimentions(&self) -> Size {
@@ -48,35 +76,44 @@ impl Multiplayer {
     }
 
     fn switch_active_player(&mut self) {
-        self.players.iter_mut().for_each(|player| player.is_active = !player.is_active);
+        self.local_player.is_active = !self.local_player.is_active;
+        self.remote_player.is_active = !self.remote_player.is_active;
     }
 
     fn did_game_finish(&self) -> bool {
         let half_mines = (self.game.total_mines as f32 / 2.).round() as i32;
-        let player_1 = self.players[0].mines_found.len() as i32;
-        let player_2 = self.players[1].mines_found.len() as i32;
+        let local_player = self.local_player.mines_found.len() as i32;
+        let remote_player = self.remote_player.mines_found.len() as i32;
 
-        half_mines == player_1 || half_mines == player_2
+        half_mines == local_player || half_mines == remote_player
     }
 
     pub fn player_winning(&self) -> Option<&Player> {
-        let first = &self.players[0];
-        let second = &self.players[1];
-
-        match first.mines_found.len().cmp(&second.mines_found.len()) {
-            Ordering::Greater => Some(first),
-            Ordering::Less => Some(second),
+        match self.local_player.mines_found.len().cmp(&self.remote_player.mines_found.len()) {
+            Ordering::Greater => Some(&self.local_player),
+            Ordering::Less => Some(&self.remote_player),
             Ordering::Equal => None,
         }
     }
 
-    pub fn remaining_to_win(&self) -> i32 {
-        let player_1 = self.players[0].mines_found.len();
-        let player_2 = self.players[1].mines_found.len();
-        let half_mines = (self.game.total_mines as f32 / 2.).round() as i32;
-        let max = cmp::max(player_1, player_2) as i32;
+    pub fn remaining_to_win(&self) -> usize {
+        let local_player = self.local_player.mines_found.len();
+        let remote_player = self.remote_player.mines_found.len();
+        let half_mines = (self.game.total_mines as f32 / 2.).round() as usize;
+        let max = cmp::max(local_player, remote_player);
 
         half_mines - max
+    }
+
+    pub fn local_to_win(&self) -> usize {
+        let local_player = self.local_player.mines_found.len();
+        let half_mines = (self.game.total_mines as f32 / 2.).round() as usize;
+
+        half_mines - local_player
+    }
+
+    pub fn total_mines_to_win(&self) -> usize {
+        1 + self.game.total_mines / 2
     }
 
     #[allow(clippy::needless_return)]
@@ -84,10 +121,10 @@ impl Multiplayer {
         if !self.did_game_finish() {
             return None;
         }
-        if self.players[0].score() > self.players[1].score() {
-            return Some(&self.players[0]);
+        if self.local_player.score() > self.remote_player.score() {
+            return Some(&self.local_player);
         } else {
-            return Some(&self.players[1]);
+            return Some(&self.remote_player);
         }
     }
 }
@@ -98,14 +135,26 @@ mod tests {
 
     #[test]
     fn test_get_board_size() {
-        let mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mult = Multiplayer::new("1", "2", Difficulty::Easy);
 
         assert_eq!(mult.get_board_dimentions(), Size { width: 10, height: 10 });
     }
 
     #[test]
+    fn test_total_mines_to_win() {
+        let mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        assert_eq!(mult.total_mines_to_win(), 6);
+
+        let mult = Multiplayer::new("1", "2", Difficulty::Medium);
+        assert_eq!(mult.total_mines_to_win(), 21);
+
+        let mult = Multiplayer::new("1", "2", Difficulty::Hard);
+        assert_eq!(mult.total_mines_to_win(), 50);
+    }
+
+    #[test]
     fn test_switch_player_after_selecting_non_mine() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         let mine = coordinates_for_non_mine(&mult.game.board);
@@ -116,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_does_not_switch_player_after_selecting_mine() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         let mine = coordinates_for_mine(&mult.game.board);
@@ -127,7 +176,7 @@ mod tests {
 
     #[test]
     fn test_remaining_to_win() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -141,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_is_win() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -159,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_is_win_second_player() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -184,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_player_winning() {
-        let mut mult = Multiplayer::new(["1", "2"], Difficulty::Easy);
+        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
         assert!(mult.player_winning().is_none());
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));

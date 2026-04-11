@@ -40,7 +40,7 @@ impl Board {
         Board::new_with_cells(Vec2::new(cells, size))
     }
 
-    pub fn new(mines: i32, size: Size) -> Self {
+    pub fn new(mines: usize, size: Size) -> Self {
         let mut board = Board::new_empty(size);
         board.add_mines(mines).add_cell_numbers();
         board
@@ -52,7 +52,7 @@ impl Board {
 
     // Populate cells:
 
-    fn add_mines(&mut self, mines: i32) -> &mut Self {
+    fn add_mines(&mut self, mines: usize) -> &mut Self {
         if mines == 0 {
             return self;
         }

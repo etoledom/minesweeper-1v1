@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ewebsock::{WsEvent, WsMessage, WsReceiver, WsSender};
 use minesweeper_multiplayer::messages::*;
 
@@ -6,6 +8,17 @@ pub enum Message {
     OpenGames(OpenGamesMessage),
     CellSelected(CellSelectedMessage),
     Text(String),
+}
+
+impl Display for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Message::GameStarted(_) => write!(f, "Game start"),
+            Message::OpenGames(msg) => write!(f, "Open games list: {}", msg.games.len()),
+            Message::CellSelected(msg) => write!(f, "Cell selected: ({}, {})", msg.coordinates.x, msg.coordinates.y),
+            Message::Text(msg) => write!(f, "{}", msg),
+        }
+    }
 }
 
 pub struct WSClient {

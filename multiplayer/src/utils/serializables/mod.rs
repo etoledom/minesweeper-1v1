@@ -1,6 +1,6 @@
 mod serializable_board;
 mod serializable_point;
-use minesweeper_core::{Cell, CellKind, CellState, Difficulty};
+use minesweeper_core::{Cell, CellKind, CellState, Difficulty, Game};
 
 use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize};
 pub use serializable_board::*;
@@ -101,11 +101,38 @@ impl From<SerializableCell> for Cell {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub enum SerializableDifficulty {
+    Easy,
+    Medium,
+    Hard,
+}
+
+impl From<Difficulty> for SerializableDifficulty {
+    fn from(value: Difficulty) -> Self {
+        match value {
+            Difficulty::Easy => SerializableDifficulty::Easy,
+            Difficulty::Medium => SerializableDifficulty::Medium,
+            Difficulty::Hard => SerializableDifficulty::Hard,
+        }
+    }
+}
+
+impl From<SerializableDifficulty> for Difficulty {
+    fn from(value: SerializableDifficulty) -> Self {
+        match value {
+            SerializableDifficulty::Easy => Difficulty::Easy,
+            SerializableDifficulty::Medium => Difficulty::Medium,
+            SerializableDifficulty::Hard => Difficulty::Hard,
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct GameDefinition {
     pub name: String,
     pub id: String,
-    pub difficulty: String,
+    pub difficulty: SerializableDifficulty,
 }
 
 impl GameDefinition {
@@ -113,7 +140,34 @@ impl GameDefinition {
         GameDefinition {
             name: name.into(),
             id: id.into(),
-            difficulty: difficulty.to_string(),
+            difficulty: difficulty.into(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct SerializableGame {
+    board: SerializableBoard,
+    total_mines: usize,
+    difficulty: SerializableDifficulty,
+}
+
+impl From<Game> for SerializableGame {
+    fn from(value: Game) -> Self {
+        SerializableGame {
+            board: value.board.into(),
+            total_mines: value.total_mines,
+            difficulty: value.difficulty.into(),
+        }
+    }
+}
+
+impl From<SerializableGame> for Game {
+    fn from(value: SerializableGame) -> Self {
+        Game {
+            board: value.board.into(),
+            total_mines: value.total_mines,
+            difficulty: value.difficulty.into(),
         }
     }
 }

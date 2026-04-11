@@ -1,4 +1,4 @@
-use minesweeper_core::{Board, Difficulty};
+use minesweeper_core::{Difficulty, Game};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json;
 
@@ -21,22 +21,26 @@ impl<T: Serialize + DeserializeOwned> JsonConvertible for T {
 
 #[derive(Serialize, Deserialize)]
 pub struct GameStartMessage {
-    pub name: String,
-    board: SerializableBoard,
+    pub game_name: String,
+    pub local_player: String,
+    pub remote_player: String,
+    game: SerializableGame,
     pub is_active: bool,
 }
 
 impl GameStartMessage {
-    pub fn new(board: SerializableBoard, is_active: bool) -> Self {
+    pub fn new(game: &Game, is_active: bool, local_player: String, remote_player: String) -> Self {
         GameStartMessage {
-            name: "start".to_owned(),
-            board,
+            game_name: "Minesweeper".to_string(),
+            local_player,
+            remote_player,
+            game: game.clone().into(),
             is_active,
         }
     }
 
-    pub fn get_board(&self) -> Board {
-        self.board.clone().into()
+    pub fn get_game(&self) -> Game {
+        self.game.clone().into()
     }
 }
 

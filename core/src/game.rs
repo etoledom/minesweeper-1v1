@@ -3,30 +3,30 @@ use core::fmt;
 use crate::board::Board;
 use crate::graphics::*;
 
-struct GameConfiguration {
-    mines_count: i32,
-    size: Size,
+pub struct GameConfiguration {
+    pub mines_count: usize,
+    pub size: Size,
 }
 
 impl GameConfiguration {
-    fn easy() -> GameConfiguration {
+    pub fn easy() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 11,
+            mines_count: 15,
             size: Size { height: 10, width: 10 },
         }
     }
 
-    fn medium() -> GameConfiguration {
+    pub fn medium() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 41,
+            mines_count: 51,
             size: Size { height: 16, width: 16 },
         }
     }
 
-    fn hard() -> GameConfiguration {
+    pub fn hard() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 99,
-            size: Size { height: 16, width: 30 },
+            mines_count: 120,
+            size: Size { height: 24, width: 20 },
         }
     }
 
@@ -39,8 +39,9 @@ impl GameConfiguration {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum Difficulty {
+    #[default]
     Easy,
     Medium,
     Hard,
@@ -52,10 +53,16 @@ impl fmt::Display for Difficulty {
     }
 }
 
+impl Difficulty {
+    pub fn configuration(&self) -> GameConfiguration {
+        GameConfiguration::configuration_for(self)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Game {
     pub board: Board,
-    pub total_mines: i32,
+    pub total_mines: usize,
     pub difficulty: Difficulty,
 }
 
