@@ -12,7 +12,7 @@ use minesweeper_multiplayer::serializables::*;
 use uuid::Uuid;
 
 use futures::channel::mpsc::{unbounded, UnboundedSender};
-use futures_util::{future, pin_mut, stream::TryStreamExt, StreamExt};
+use futures_util::{future, stream::TryStreamExt, StreamExt};
 
 pub type Tx = UnboundedSender<Message>;
 pub type PeerMap = Arc<Mutex<HashMap<Uuid, Tx>>>;
@@ -46,16 +46,19 @@ impl Server {
 
         let (outgoing, incoming) = socket.split();
 
-        let handle_received = incoming.try_for_each(|msg| {
+        let receive_from_client = incoming.try_for_each(|msg| {
             println!("Received a message from {}: {}", uuid, msg.to_text().unwrap());
             self.handle_received_message(msg, uuid);
             future::ok(())
         });
 
-        let receive_from_others = rx.map(Ok).forward(outgoing);
+        let send_to_client = rx.map(Ok).forward(outgoing);
 
-        pin_mut!(handle_received, receive_from_others);
-        future::select(handle_received, receive_from_others).await;
+        // Run until client disconnects or channel is closed.
+        tokio::select! {
+            _ = receive_from_client => {},
+            _ = send_to_client => {},
+        }
 
         println!("{} disconnected", uuid.to_string());
         self.remove_player(uuid);
@@ -105,7 +108,7 @@ impl Server {
             let mut games = self.games.lock().unwrap();
             let game = games.iter_mut().find(|game| game.get_id() == game_id).unwrap();
             game.player_selected(message.coordinates.into());
-            self.send_selected_to_players(game, message.coordinates);
+            self.send_selected_to_players(game, message.coordinates, id);
         } else if let Ok(message) = CreateGameMessage::from_json(message_string) {
             let mut games_guard = self.games.lock().unwrap();
             let game_id = Uuid::new_v4().to_string();
@@ -153,10 +156,14 @@ impl Server {
         self.send_message_to_id(id, message.to_json());
     }
 
-    fn send_selected_to_players(&self, game: &Game, coordinates: SerializablePoint) {
+    fn send_selected_to_players(&self, game: &Game, coordinates: SerializablePoint, sender_id: Uuid) {
         for player in game.get_players() {
             let is_active = game.is_player_active(player.get_id());
-            self.send_message_to(player, CellSelectedMessage::new(coordinates, is_active).to_json());
+            println!("SenderID = playerID: {} = {}", sender_id, player.get_id());
+            self.send_message_to(
+                player,
+                CellSelectedMessage::new(coordinates, sender_id != player.get_id(), is_active).to_json(),
+            );
         }
     }
 

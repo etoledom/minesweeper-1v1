@@ -73,14 +73,16 @@ impl IdentificationMessage {
 #[derive(Serialize, Deserialize)]
 pub struct CellSelectedMessage {
     pub name: String,
+    pub is_remote_sender: bool,
     pub is_active_player: bool,
     pub coordinates: SerializablePoint,
 }
 
 impl CellSelectedMessage {
-    pub fn new(coordinates: SerializablePoint, is_active_player: bool) -> Self {
+    pub fn new(coordinates: SerializablePoint, is_remote_sender: bool, is_active_player: bool) -> Self {
         CellSelectedMessage {
             name: "cell_selected".to_owned(),
+            is_remote_sender,
             is_active_player,
             coordinates,
         }

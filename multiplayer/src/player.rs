@@ -22,6 +22,10 @@ impl Player {
     pub fn score(&self) -> i32 {
         self.mines_found.len() as i32
     }
+
+    pub fn has_mine(&self, coordinate: Point) -> bool {
+        self.mines_found.contains(&coordinate)
+    }
 }
 
 #[cfg(test)]

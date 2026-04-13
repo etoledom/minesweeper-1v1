@@ -1,3 +1,4 @@
+pub mod board;
 pub mod gameplay;
 pub mod mine_image;
 

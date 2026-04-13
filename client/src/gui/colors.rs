@@ -38,7 +38,7 @@ impl ColorScheme {
             text_secondary: Color32::from_rgb(170, 170, 170),
             text_muted: Color32::from_rgb(136, 136, 136),
 
-            player_self: Color32::from_rgb(39, 174, 96),
+            player_self: Color32::from_rgb(52, 152, 219),
             player_opponent: Color32::from_rgb(192, 57, 43),
 
             mine_self: Color32::from_rgb(39, 174, 96),
@@ -64,7 +64,7 @@ impl ColorScheme {
             text_secondary: Color32::from_rgb(80, 80, 80),
             text_muted: Color32::from_rgb(130, 130, 130),
 
-            player_self: Color32::from_rgb(39, 174, 96),
+            player_self: Color32::from_rgb(30, 108, 175),
             player_opponent: Color32::from_rgb(192, 57, 43),
 
             mine_self: Color32::from_rgb(39, 174, 96),

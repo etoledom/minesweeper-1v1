@@ -11,21 +11,21 @@ pub struct GameConfiguration {
 impl GameConfiguration {
     pub fn easy() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 15,
+            mines_count: 21,
             size: Size { height: 10, width: 10 },
         }
     }
 
     pub fn medium() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 51,
+            mines_count: 101,
             size: Size { height: 16, width: 16 },
         }
     }
 
     pub fn hard() -> GameConfiguration {
         GameConfiguration {
-            mines_count: 120,
+            mines_count: 250,
             size: Size { height: 24, width: 20 },
         }
     }

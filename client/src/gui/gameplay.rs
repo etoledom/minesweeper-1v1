@@ -1,5 +1,6 @@
 use crate::{
     gui::{
+        board::Board as BoardUI,
         colors::ColorScheme,
         game_panel::{
             game_list::{GameList, GameListAction},
@@ -14,12 +15,11 @@ use crate::{
     networking::{Message, WSClient},
 };
 
-use super::mine_image::MineImage;
 use minesweeper_multiplayer::serializables::*;
 use minesweeper_multiplayer::*;
 
 use eframe::egui;
-use egui::{Button, Color32, Label, RichText, TextStyle, Ui, Widget};
+use egui::{Label, RichText, Ui, Widget};
 
 #[derive(Clone)]
 pub struct OpenGame {
@@ -35,6 +35,7 @@ pub struct MinesBoomer {
     games_list: Vec<OpenGame>,
     pub waiting_for_enemy: bool,
     show_game_name_popup: bool,
+    last_remote_move: Option<Point>,
     new_game_form: NewGameForm,
     join_game_form: JoinGameForm,
     scheme: ColorScheme,
@@ -49,39 +50,18 @@ impl MinesBoomer {
             games_list: vec![],
             waiting_for_enemy: false,
             show_game_name_popup: false,
+            last_remote_move: None,
             new_game_form: Default::default(),
             join_game_form: Default::default(),
             scheme: ColorScheme::dark(),
         }
     }
 
-    fn draw_cell(&mut self, cell: &Cell, coordinates: Point, game: &mut Multiplayer, ui: &mut Ui) {
-        let color = get_color_for_cell(cell);
-        let text = get_text_for_cell(cell);
-
-        if cell.is_mine() && cell.is_cleared() {
-            MineImage::ui(ui);
-        } else if ui.add_sized([50., 50.], Button::new(text).fill(color)).clicked() {
+    fn draw_board(&mut self, game: &mut Multiplayer, ui: &mut Ui) {
+        if let Some(coordinates) = BoardUI::new(&game, &game.local_player, self.last_remote_move, &self.scheme).show(ui)
+        {
             self.on_cell_tapped(game, coordinates);
         }
-    }
-
-    fn draw_board(&mut self, game: &mut Multiplayer, ui: &mut Ui) {
-        let dimentions = game.get_board_dimentions();
-        ui.horizontal(|ui| {
-            for x in 0..dimentions.width {
-                ui.vertical(|ui| {
-                    for y in 0..dimentions.height {
-                        let coordinates = Point { x, y };
-
-                        let Some(cell) = game.get_board().cell_at(coordinates) else {
-                            continue;
-                        };
-                        self.draw_cell(&cell.clone(), coordinates, game, ui);
-                    }
-                });
-            }
-        });
     }
 
     fn draw_gui(&mut self, game: &Multiplayer, ui: &mut Ui) {
@@ -257,7 +237,11 @@ impl MinesBoomer {
             }
             Message::CellSelected(msg) => {
                 if let Some(game) = &mut self.game {
-                    game.player_selected(msg.coordinates.into());
+                    let coordinates: Point = msg.coordinates.into();
+                    game.player_selected(coordinates);
+                    if msg.is_remote_sender {
+                        self.last_remote_move = Some(coordinates);
+                    }
                     game.local_player.is_active = msg.is_active_player;
                     game.remote_player.is_active = !msg.is_active_player;
                     self.is_active = msg.is_active_player;
@@ -300,7 +284,7 @@ impl MinesBoomer {
     pub fn send_selected_message(&mut self, coordinates: Point) {
         println!("<- Sending cell selected");
         let serializable: SerializablePoint = coordinates.into();
-        let message = CellSelectedMessage::new(serializable, false);
+        let message = CellSelectedMessage::new(serializable, true, false);
         self.send_message(message);
     }
 
@@ -313,28 +297,6 @@ impl MinesBoomer {
     fn send_message(&mut self, message: impl JsonConvertible) {
         self.ws_client.send_message(message);
     }
-}
-
-fn get_color_for_cell(cell: &Cell) -> Color32 {
-    if cell.is_mine() && cell.is_cleared() {
-        Color32::from_rgba_premultiplied(150, 29, 27, 100)
-    } else if cell.is_cleared() {
-        Color32::GRAY
-    } else {
-        Color32::from_gray(55)
-    }
-}
-
-fn get_text_for_cell(cell: &Cell) -> RichText {
-    let text = match (cell.state, cell.kind) {
-        (CellState::Cleared, CellKind::Number(number)) => number.to_string(),
-        (_, _) => "".to_string(),
-    };
-
-    egui::RichText::new(text)
-        .size(20.)
-        .color(Color32::BLACK)
-        .text_style(TextStyle::Button)
 }
 
 impl MinesBoomer {
