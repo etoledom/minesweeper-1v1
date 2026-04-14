@@ -1,4 +1,5 @@
 #[derive(Debug, Copy, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Cell {
     pub kind: CellKind,
     pub state: CellState,
@@ -63,6 +64,7 @@ impl Cell {
 }
 
 #[derive(Debug, Copy, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CellState {
     #[default]
     Hidden,
@@ -71,6 +73,7 @@ pub enum CellState {
 }
 
 #[derive(Debug, Copy, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CellKind {
     #[default]
     Empty,

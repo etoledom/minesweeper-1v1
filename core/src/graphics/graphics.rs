@@ -1,6 +1,7 @@
 use crate::{Point, Size};
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vec2<T> {
     data: Vec<T>,
     size: Size,

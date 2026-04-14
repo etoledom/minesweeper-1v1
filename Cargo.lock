@@ -3137,6 +3137,8 @@ dependencies = [
  "criterion",
  "piston_window",
  "rand 0.10.0",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

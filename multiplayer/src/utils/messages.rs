@@ -1,4 +1,4 @@
-use minesweeper_core::{Difficulty, Game};
+use minesweeper_core::{Difficulty, Game, Point};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json;
 
@@ -21,20 +21,20 @@ impl<T: Serialize + DeserializeOwned> JsonConvertible for T {
 
 #[derive(Serialize, Deserialize)]
 pub struct GameStartMessage {
-    pub game_name: String,
+    pub game_id: String,
     pub local_player: String,
     pub remote_player: String,
-    game: SerializableGame,
     pub is_active: bool,
+    game: Game,
 }
 
 impl GameStartMessage {
-    pub fn new(game: &Game, is_active: bool, local_player: String, remote_player: String) -> Self {
+    pub fn new(game_id: impl Into<String>, game: Game, is_active: bool, local_player: String, remote_player: String) -> Self {
         GameStartMessage {
-            game_name: "Minesweeper".to_string(),
+            game_id: game_id.into(),
             local_player,
             remote_player,
-            game: game.clone().into(),
+            game,
             is_active,
         }
     }
@@ -56,32 +56,19 @@ impl SimpleMessage {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct IdentificationMessage {
-    pub name: String,
-    pub user_id: String,
-}
-
-impl IdentificationMessage {
-    pub fn new(user_id: String) -> Self {
-        IdentificationMessage {
-            name: "user_identification".to_owned(),
-            user_id,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
 pub struct CellSelectedMessage {
     pub name: String,
+    pub game_id: String,
     pub is_remote_sender: bool,
     pub is_active_player: bool,
-    pub coordinates: SerializablePoint,
+    pub coordinates: Point,
 }
 
 impl CellSelectedMessage {
-    pub fn new(coordinates: SerializablePoint, is_remote_sender: bool, is_active_player: bool) -> Self {
+    pub fn new(coordinates: Point, game_id: String, is_remote_sender: bool, is_active_player: bool) -> Self {
         CellSelectedMessage {
             name: "cell_selected".to_owned(),
+            game_id,
             is_remote_sender,
             is_active_player,
             coordinates,
@@ -91,26 +78,24 @@ impl CellSelectedMessage {
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenGamesMessage {
-    pub name: String,
     pub games: Vec<GameDefinition>,
 }
 
 impl OpenGamesMessage {
     pub fn new(games: Vec<GameDefinition>) -> Self {
-        OpenGamesMessage { name: "open_games".to_owned(), games }
+        OpenGamesMessage { games }
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct CreateGameMessage {
-    pub name: String,
     pub game: GameDefinition,
 }
 
 impl CreateGameMessage {
     pub fn new(name: impl Into<String>, difficulty: Difficulty) -> Self {
         let game = GameDefinition::new("", name, difficulty);
-        CreateGameMessage { name: "create_game".to_owned(), game }
+        CreateGameMessage { game }
     }
 }
 

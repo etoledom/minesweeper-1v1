@@ -1,6 +1,7 @@
 use rand::RngExt;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Point {
     pub x: usize,
     pub y: usize,

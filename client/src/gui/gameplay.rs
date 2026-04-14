@@ -15,7 +15,6 @@ use crate::{
     networking::{Message, WSClient},
 };
 
-use minesweeper_multiplayer::serializables::*;
 use minesweeper_multiplayer::*;
 
 use eframe::egui;
@@ -162,7 +161,7 @@ impl MinesBoomer {
         }
         if game.winner().is_none() {
             game.player_selected(coordinates);
-            self.send_selected_message(coordinates);
+            self.send_selected_message(coordinates, game.game_id.clone());
         }
     }
 }
@@ -213,7 +212,8 @@ impl MinesBoomer {
         match message {
             Message::GameStarted(msg) => {
                 let game = msg.get_game();
-                let mut multi_game = Multiplayer::new_with_game(game, &msg.local_player, &msg.remote_player);
+                let mut multi_game =
+                    Multiplayer::new_with_game(game, msg.game_id.clone(), &msg.local_player, &msg.remote_player);
 
                 multi_game.local_player.is_active = msg.is_active;
                 multi_game.remote_player.is_active = !msg.is_active;
@@ -228,7 +228,7 @@ impl MinesBoomer {
                     .games
                     .iter()
                     .map(|game| OpenGame {
-                        name: game.name.clone(),
+                        name: game.host_name.clone(),
                         difficulty: game.difficulty.into(),
                         game_id: game.id.clone(),
                     })
@@ -248,9 +248,8 @@ impl MinesBoomer {
                 }
             }
             Message::Text(msg) => match msg.as_str() {
-                "identify" => {
+                "connected" => {
                     self.request_open_games();
-                    self.request_user_id();
                 }
                 "waiting_enemy" => {
                     self.waiting_for_enemy = true;
@@ -267,24 +266,15 @@ impl MinesBoomer {
         println!("Ok.");
     }
 
-    pub fn request_user_id(&mut self) {
-        println!("<- Sending player identification");
-        let name = "Player".to_owned();
-        let message = IdentificationMessage::new(name);
-
-        self.send_message(message);
-    }
-
     pub fn request_open_games(&mut self) {
         println!("<- Sending games request");
         let message = SimpleMessage::new("games_request");
         self.send_message(message);
     }
 
-    pub fn send_selected_message(&mut self, coordinates: Point) {
+    pub fn send_selected_message(&mut self, coordinates: Point, game_id: String) {
         println!("<- Sending cell selected");
-        let serializable: SerializablePoint = coordinates.into();
-        let message = CellSelectedMessage::new(serializable, true, false);
+        let message = CellSelectedMessage::new(coordinates, game_id, true, false);
         self.send_message(message);
     }
 

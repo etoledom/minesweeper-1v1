@@ -3,71 +3,48 @@ use minesweeper_multiplayer::{Game as CoreGame, Point};
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub struct Player {
-    id: Uuid,
-    name: String,
-    game_id: String,
-}
-
-impl Player {
-    pub fn new(id: Uuid, name: String, game_id: impl Into<String>) -> Self {
-        Player {
-            id,
-            name,
-            game_id: game_id.into(),
-        }
-    }
-
-    pub fn game_id(&self) -> String {
-        self.game_id.clone()
-    }
-
-    pub fn get_id(&self) -> Uuid {
-        self.id
-    }
-
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug)]
 pub struct Game {
     id: String,
-    host: Player,
-    client: Option<Player>,
+    host: Uuid,
+    client: Option<Uuid>,
     multi_game: Multiplayer,
 }
 
 impl Game {
-    pub fn new(player: Player, id: impl Into<String>, difficulty: Difficulty) -> Self {
+    pub fn new(player: Uuid, id: impl Into<String> + Clone, difficulty: Difficulty) -> Self {
         Game {
             host: player,
             client: None,
-            multi_game: Multiplayer::new("", "", difficulty),
+            multi_game: Multiplayer::new(id.clone().into(), "", "", difficulty),
             id: id.into(),
         }
     }
 
+    pub fn set_local_name(&mut self, name: String) {
+        self.multi_game.local_player.name = name;
+    }
+
     pub fn setup_multi_game(&mut self) {
-        self.multi_game.local_player.id = self.host.get_id().to_string();
-        self.multi_game.remote_player.id = self.client.as_ref().unwrap().get_id().to_string();
+        self.multi_game.local_player.id = self.host.to_string();
+        self.multi_game.remote_player.id = self.client.as_ref().unwrap().to_string();
     }
 
     pub fn get_inner_game(&self) -> &CoreGame {
         &self.multi_game.game
     }
 
-    pub fn get_id(&self) -> String {
-        self.id.clone()
+    pub fn get_id(&self) -> &str {
+        &self.id
     }
 
-    pub fn get_client(&self) -> Option<&Player> {
+    pub fn get_client(&self) -> Option<&Uuid> {
         self.client.as_ref()
     }
 
-    pub fn set_client(&mut self, client: Player) {
+    pub fn set_client(&mut self, client: Uuid, name: String) {
         self.client = Some(client);
+        self.multi_game.remote_player.name = name;
+        self.multi_game.remote_player.id = client.to_string();
     }
 
     pub fn remove_client(&mut self) {
@@ -78,8 +55,16 @@ impl Game {
         self.client.is_some()
     }
 
-    pub fn get_host(&self) -> &Player {
+    pub fn get_host(&self) -> &Uuid {
         &self.host
+    }
+
+    pub fn get_host_name(&self) -> &str {
+        &self.multi_game.local_player.name
+    }
+
+    pub fn get_client_name(&self) -> &str {
+        &self.multi_game.remote_player.name
     }
 
     pub fn get_difficulty(&self) -> &Difficulty {
@@ -94,11 +79,15 @@ impl Game {
         self.multi_game.current_player().id == player_id.into()
     }
 
-    pub fn get_players(&self) -> Vec<&Player> {
+    pub fn get_players(&self) -> Vec<&Uuid> {
         let mut players = vec![&self.host];
         if let Some(client) = &self.client {
             players.push(client);
         }
         players
+    }
+
+    pub fn has_player(&self, player: &Uuid) -> bool {
+        self.get_players().contains(&player)
     }
 }

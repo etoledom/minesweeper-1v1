@@ -1,10 +1,7 @@
 mod server;
-use server::*;
+use crate::server::*;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::Arc;
 
 use axum::{
     extract::{State, WebSocketUpgrade},
@@ -16,11 +13,7 @@ use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
-    let multi_games: MultiGames = Arc::new(Mutex::new(vec![]));
-
-    let state = PeerMap::new(Mutex::new(HashMap::new()));
-    let players = Players::new(Mutex::new(HashMap::new()));
-    let server = Arc::new(Server::new(state, multi_games, players));
+    let server = Arc::new(Server::new());
 
     let dist_path = if std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/dist")).exists() {
         concat!(env!("CARGO_MANIFEST_DIR"), "/dist")

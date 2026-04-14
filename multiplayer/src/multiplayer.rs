@@ -6,11 +6,12 @@ use std::cmp::{self, Ordering};
 pub struct Multiplayer {
     pub local_player: Player,
     pub remote_player: Player,
+    pub game_id: String,
     pub game: Game,
 }
 
 impl Multiplayer {
-    pub fn new(local_player: &str, remote_player: &str, difficulty: Difficulty) -> Multiplayer {
+    pub fn new(game_id: impl Into<String>, local_player: &str, remote_player: &str, difficulty: Difficulty) -> Multiplayer {
         let mut local_player = Player::new(local_player);
         let remote_player = Player::new(remote_player);
 
@@ -19,11 +20,12 @@ impl Multiplayer {
         Multiplayer {
             local_player,
             remote_player,
+            game_id: game_id.into(),
             game: Game::new(difficulty),
         }
     }
 
-    pub fn new_with_game(inner_game: Game, local_player: &str, remote_player: &str) -> Self {
+    pub fn new_with_game(inner_game: Game, game_id: String, local_player: &str, remote_player: &str) -> Self {
         let mut local_player = Player::new(local_player);
         let remote_player = Player::new(remote_player);
 
@@ -32,6 +34,7 @@ impl Multiplayer {
         Multiplayer {
             local_player,
             remote_player,
+            game_id,
             game: inner_game,
         }
     }
@@ -133,28 +136,32 @@ impl Multiplayer {
 mod tests {
     use super::*;
 
+    fn new_multy_game(difficulty: Difficulty) -> Multiplayer {
+        Multiplayer::new("", "1", "2", difficulty)
+    }
+
     #[test]
     fn test_get_board_size() {
-        let mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mult = new_multy_game(Difficulty::Easy);
 
         assert_eq!(mult.get_board_dimentions(), Size { width: 10, height: 10 });
     }
 
     #[test]
     fn test_total_mines_to_win() {
-        let mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.total_mines_to_win(), 6);
 
-        let mult = Multiplayer::new("1", "2", Difficulty::Medium);
+        let mult = new_multy_game(Difficulty::Medium);
         assert_eq!(mult.total_mines_to_win(), 21);
 
-        let mult = Multiplayer::new("1", "2", Difficulty::Hard);
+        let mult = new_multy_game(Difficulty::Hard);
         assert_eq!(mult.total_mines_to_win(), 50);
     }
 
     #[test]
     fn test_switch_player_after_selecting_non_mine() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         let mine = coordinates_for_non_mine(&mult.game.board);
@@ -165,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_does_not_switch_player_after_selecting_mine() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         let mine = coordinates_for_mine(&mult.game.board);
@@ -176,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_remaining_to_win() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -190,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_is_win() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -208,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_is_win_second_player() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert_eq!(mult.current_player().name, "1");
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));
@@ -233,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_player_winning() {
-        let mut mult = Multiplayer::new("1", "2", Difficulty::Easy);
+        let mut mult = new_multy_game(Difficulty::Easy);
         assert!(mult.player_winning().is_none());
 
         mult.player_selected(coordinates_for_mine(&mult.game.board));

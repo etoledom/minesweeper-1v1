@@ -40,6 +40,7 @@ impl GameConfiguration {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Difficulty {
     #[default]
     Easy,
@@ -60,6 +61,7 @@ impl Difficulty {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Game {
     pub board: Board,
     pub total_mines: usize,
