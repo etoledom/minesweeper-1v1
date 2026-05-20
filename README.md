@@ -1,10 +1,11 @@
 # Minesweeper 1v1
 
-![Minesweeper 1v1 screenshot](screenshot.png)
+
+<img width="1672" height="941" alt="minesboomer" src="https://github.com/user-attachments/assets/079a701e-81e4-4deb-90ed-5fc3a173605b" />
 
 A real-time multiplayer Minesweeper game where two players compete on the same board. Built in Rust, from game logic to server to browser client.
 
-**[Play it live →](https://minesweeper.fly.dev/)**
+**[Try it live](https://minesweeper.fly.dev/)**
 
 ## The Game
 
