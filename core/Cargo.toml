@@ -4,9 +4,9 @@ version = "0.2.0"
 edition = "2021"
 license = "MIT"
 description = "Core logic for Minesweeper game"
-homepage = "https://github.com/etoledom/minesweeper_core"
-documentation = "https://github.com/etoledom/minesweeper_core"
-repository = "https://github.com/etoledom/minesweeper_core"
+homepage = "https://github.com/etoledom/minesweeper-1v1/tree/main/core"
+documentation = "https://github.com/etoledom/minesweeper-1v1/tree/main/core"
+repository = "https://github.com/etoledom/minesweeper-1v1/tree/main/core"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
