@@ -31,7 +31,7 @@ The project is a Cargo workspace with four crates:
 
 ## Running Locally
 
-**Prerequisites:** Rust, [`Trunk`](https://trunkrs.dev/) (`cargo install trunk`), and `just` (`cargo install just`).
+**Prerequisites:** Rust, [`Trunk`](https://trunk-rs.github.io/trunk/) (`cargo install trunk`), and [`just`](https://github.com/casey/just) (`cargo install just`).
 
 Run both server and client:
 
