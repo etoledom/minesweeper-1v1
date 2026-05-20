@@ -14,7 +14,9 @@ Two players join a game and play on the same Minesweeper board simultaneously. T
 ### Rules
 
 - Both players see the same board in real time
-- Click a cell to reveal it. If it's not a mine, it's the opponent's turn
+- Click a cell to reveal it.
+- If it's a mine is a point for you. It will be automatically flagged
+- If it's not a mine, it's the opponent's turn
 - Reveal more mines than your opponent to win
 - Numbers show how many mines are adjacent to a cell
 
