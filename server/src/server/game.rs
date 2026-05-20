@@ -86,8 +86,4 @@ impl Game {
         }
         players
     }
-
-    pub fn has_player(&self, player: &Uuid) -> bool {
-        self.get_players().contains(&player)
-    }
 }

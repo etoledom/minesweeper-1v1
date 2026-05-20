@@ -10,12 +10,15 @@ use crate::{
             progress_section::ProgressSection,
             to_win_section::ToWinSection,
             turn_indicator::TurnIndicator,
+            waiting::WaitingScreen,
         },
     },
     networking::{Message, WSClient},
 };
 
 use minesweeper_multiplayer::*;
+
+use crate::gui::strings::Strings;
 
 use eframe::egui;
 use egui::{Label, RichText, Ui, Widget};
@@ -33,6 +36,7 @@ pub struct MinesBoomer {
     is_active: bool,
     games_list: Vec<OpenGame>,
     pub waiting_for_enemy: bool,
+    waiting_game_info: Option<(String, Difficulty)>,
     show_game_name_popup: bool,
     last_remote_move: Option<Point>,
     new_game_form: NewGameForm,
@@ -48,6 +52,7 @@ impl MinesBoomer {
             is_active: false,
             games_list: vec![],
             waiting_for_enemy: false,
+            waiting_game_info: None,
             show_game_name_popup: false,
             last_remote_move: None,
             new_game_form: Default::default(),
@@ -66,8 +71,8 @@ impl MinesBoomer {
     fn draw_gui(&mut self, game: &Multiplayer, ui: &mut Ui) {
         if let Some(winner) = game.winner() {
             ui.vertical_centered_justified(|ui| {
-                ui.heading("WINNER!");
-                ui.heading(winner.name.to_string());
+                ui.heading(RichText::new(Strings::winner()).color(self.scheme.accent));
+                ui.heading(RichText::new(winner.name.to_string()).color(self.scheme.text_primary));
             });
             return;
         }
@@ -106,14 +111,16 @@ impl MinesBoomer {
 
     fn draw_game_list(&mut self, ui: &mut Ui) {
         ui.vertical_centered(|ui| {
-            ui.add(Label::new(RichText::new("MinesBooMer!").size(50.)));
+            ui.add(Label::new(
+                RichText::new(Strings::app_title()).size(50.).color(self.scheme.text_primary),
+            ));
             ui.separator();
             ui.add_space(10.);
-            ui.label("Find a game to join or create your own");
+            ui.label(egui::RichText::new(Strings::find_game_subtitle()).color(self.scheme.text_secondary));
             ui.add_space(10.);
             ui.vertical_centered(|ui| {
                 ui.set_max_width(400.);
-                if ui.button("New game").clicked() {
+                if ui.button(Strings::new_game_button()).clicked() {
                     self.show_game_name_popup = true;
                 }
 
@@ -138,6 +145,7 @@ impl MinesBoomer {
 
                     match action {
                         NewGameFormAction::Create { name, difficulty } => {
+                            self.waiting_game_info = Some((name.clone(), difficulty));
                             self.send_create_new_game_message(name, difficulty);
                             self.show_game_name_popup = false;
                         }
@@ -152,7 +160,11 @@ impl MinesBoomer {
     }
 
     fn draw_waiting_screen(&self, ui: &mut Ui) {
-        ui.heading("Waiting for your enemy to connect...");
+        let game_info = self
+            .waiting_game_info
+            .as_ref()
+            .map(|(name, diff)| (name.as_str(), diff));
+        WaitingScreen::new(game_info, &self.scheme).show(ui);
     }
 
     fn on_cell_tapped(&mut self, game: &mut Multiplayer, coordinates: Point) {
@@ -169,6 +181,12 @@ impl MinesBoomer {
 impl eframe::App for MinesBoomer {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui_extras::install_image_loaders(ui.ctx());
+
+        self.scheme = if ui.visuals().dark_mode {
+            ColorScheme::dark()
+        } else {
+            ColorScheme::light()
+        };
 
         for message in self.ws_client.poll().iter() {
             self.handle_message(message);
@@ -222,6 +240,7 @@ impl MinesBoomer {
                 self.game = Some(multi_game);
 
                 self.waiting_for_enemy = false;
+                self.waiting_game_info = None;
             }
             Message::OpenGames(msg) => {
                 let games = msg

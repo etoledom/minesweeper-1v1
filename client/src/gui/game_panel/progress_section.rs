@@ -1,4 +1,4 @@
-use eframe::egui::{Color32, Response, RichText, Ui, Widget};
+use eframe::egui::{Response, RichText, Ui, Widget};
 use minesweeper_multiplayer::Player;
 
 use crate::gui::colors::ColorScheme;
@@ -32,7 +32,7 @@ impl<'a> ProgressSection<'a> {
 impl<'a> Widget for ProgressSection<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
         ui.vertical(|ui| {
-            ui.label(RichText::new(Strings::progress()).color(Color32::WHITE).size(14.0));
+            ui.label(RichText::new(Strings::progress()).color(self.colors.text_primary).size(14.0));
 
             ui.add_space(8.0);
 

@@ -2,4 +2,5 @@
 target
 **/**/.DS_Store
 **/client/dist
+**/server/dist
 fly.toml

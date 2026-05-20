@@ -29,7 +29,13 @@ pub struct GameStartMessage {
 }
 
 impl GameStartMessage {
-    pub fn new(game_id: impl Into<String>, game: Game, is_active: bool, local_player: String, remote_player: String) -> Self {
+    pub fn new(
+        game_id: impl Into<String>,
+        game: Game,
+        is_active: bool,
+        local_player: String,
+        remote_player: String,
+    ) -> Self {
         GameStartMessage {
             game_id: game_id.into(),
             local_player,
@@ -57,7 +63,6 @@ impl SimpleMessage {
 
 #[derive(Serialize, Deserialize)]
 pub struct CellSelectedMessage {
-    pub name: String,
     pub game_id: String,
     pub is_remote_sender: bool,
     pub is_active_player: bool,
@@ -67,7 +72,6 @@ pub struct CellSelectedMessage {
 impl CellSelectedMessage {
     pub fn new(coordinates: Point, game_id: String, is_remote_sender: bool, is_active_player: bool) -> Self {
         CellSelectedMessage {
-            name: "cell_selected".to_owned(),
             game_id,
             is_remote_sender,
             is_active_player,

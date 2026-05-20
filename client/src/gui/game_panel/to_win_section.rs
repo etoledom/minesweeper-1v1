@@ -1,4 +1,4 @@
-use eframe::egui::{Color32, CornerRadius, FontId, Frame, Margin, Response, RichText, Ui, Widget};
+use eframe::egui::{CornerRadius, FontId, Frame, Margin, Response, RichText, Ui, Widget};
 
 use crate::gui::colors::ColorScheme;
 use crate::gui::strings::Strings;
@@ -28,7 +28,7 @@ impl<'a> Widget for ToWinSection<'a> {
                     ui.label(RichText::new("⭐").size(16.0));
                     ui.label(
                         RichText::new(Strings::more_to_win_label(self.mines_remaining))
-                            .color(Color32::WHITE)
+                            .color(self.colors.text_primary)
                             .font(FontId::proportional(16.0)),
                     );
                 });

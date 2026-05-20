@@ -15,11 +15,7 @@ use tower_http::services::ServeDir;
 async fn main() {
     let server = Arc::new(Server::new());
 
-    let dist_path = if std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/dist")).exists() {
-        concat!(env!("CARGO_MANIFEST_DIR"), "/dist")
-    } else {
-        "/dist"
-    };
+    let dist_path = dist_path();
 
     let app = Router::new()
         .route("/ws", get(ws_handler))
@@ -31,11 +27,25 @@ async fn main() {
         .await
         .unwrap();
 
+    println!("-> Ready to serve: {}", listener.local_addr().unwrap().to_string());
+
     axum::serve(listener, app).await.unwrap();
 }
 
 async fn ws_handler(State(server): State<Arc<Server>>, ws: WebSocketUpgrade) -> Response {
     ws.on_upgrade(move |socket| async move {
         server.handle_connection(socket).await;
+    })
+}
+
+fn dist_path() -> String {
+    const LOCAL_DIST: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/dist");
+    std::env::var("DIST_PATH").unwrap_or_else(|_| {
+        if std::path::Path::new(LOCAL_DIST).exists() {
+            LOCAL_DIST
+        } else {
+            "/dist"
+        }
+        .to_string()
     })
 }

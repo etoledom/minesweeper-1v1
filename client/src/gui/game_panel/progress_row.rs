@@ -31,7 +31,7 @@ impl<'a> egui::Widget for ProgressRow<'a> {
                 ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(
                         RichText::new(format!("{}/{}", self.current, self.target))
-                            .color(Color32::WHITE)
+                            .color(self.colors.text_primary)
                             .size(14.0),
                     );
                 });

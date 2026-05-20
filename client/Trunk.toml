@@ -1,0 +1,4 @@
+[[proxy]]
+backend = "http://localhost:8080/ws"
+rewrite = "/ws"
+ws = true

@@ -27,7 +27,16 @@ impl Strings {
         "Found"
     }
     pub fn winner() -> &'static str {
-        "Winner!"
+        "WINNER!"
+    }
+    pub fn app_title() -> &'static str {
+        "MinesBooMer!"
+    }
+    pub fn find_game_subtitle() -> &'static str {
+        "Find a game to join or create your own"
+    }
+    pub fn new_game_button() -> &'static str {
+        "New game"
     }
     pub fn waiting_for_opponent() -> &'static str {
         "Waiting for opponent"
