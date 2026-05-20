@@ -21,10 +21,10 @@ Two players join a game and play on the same Minesweeper board simultaneously. T
 
 The project is a Cargo workspace with four crates:
 
-- **`core`** — pure game logic with no dependencies. Handles board generation, cell revealing, mine detection, and win conditions for a solo game. Published as [`minesweeper_core`](https://crates.io/crates/minesweeper_core) on crates.io.
-- **`multiplayer`** — implementation of the multiplayer rules. Contains shared types (game state, player actions, messages) used by both client and server to stay in sync.
-- **`server`** — serves the web client as static files and manages game sessions over WebSockets, built with [Axum](https://github.com/tokio-rs/axum) and [Tokio](https://tokio.rs/).
-- **`client`** — A native desktop and a WebAssembly app built with [egui](https://github.com/emilk/egui) that runs in the browser and communicates with the server via WebSocket.
+- **`core`**: pure game logic with no dependencies. Handles board generation, cell revealing, mine detection, and win conditions for a solo game. Published as [`minesweeper_core`](https://crates.io/crates/minesweeper_core) on crates.io.
+- **`multiplayer`**: implementation of the multiplayer rules. Contains shared types (game state, player actions, messages) used by both client and server to stay in sync.
+- **`server`**: serves the web client as static files and manages game sessions over WebSockets, built with [Axum](https://github.com/tokio-rs/axum) and [Tokio](https://tokio.rs/).
+- **`client`**: a native desktop and a WebAssembly app built with [egui](https://github.com/emilk/egui) that runs in the browser and communicates with the server via WebSocket.
 
 ## Running Locally
 
